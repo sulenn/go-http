@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/sulenn/go-http/core/utils"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/sulenn/go-http/core/types"
 )
@@ -37,32 +39,39 @@ func connectDB(t *testing.T) {
 func TestMain(m *testing.M) {
 	connectDB(&testing.T{})
 	exitCode := m.Run()
+	err := db.Close()
+	if err != nil {
+		log.Fatalf("close db failed: %v\n", err)
+	}
 	os.Exit(exitCode)
 }
 
-func Test_Get(t *testing.T) {
+func Test_GetAndParse(t *testing.T) {
 	params["contractID"] = "RepositoryDB0"
 	params["operation"] = "getCommit"
-	params["arg"] = "{\"commit_hash\":\"3f2dc2ec21876d31ffa06744f215b6a17c5d3bad\",\"repo_id\": \"1002604\"}"
+	params["arg"] = "{\"commit_hash\":\"082c254068a6564bc03516d9415930f90672e8dd\",\"repo_id\": \"205803088\"}"
 
 	bytes, err := Get(url, params, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	responseJson := &types.ResponseJSON{}
-	err = json.Unmarshal(bytes, responseJson)
-	log.Println(string(bytes))
+	responseJSON, err := utils.ParseHttpResponse(bytes)
+	if err != nil {
+		t.Fatalf("parse bytes from response failed: %+v\n", err)
+	}
+	log.Printf("all info of response body is: %+v", responseJSON)
 }
 
 func Test_Post(t *testing.T) {
 	body.ContractID = "RepositoryDB0"
 	body.Operation = "putCommit"
-	body.Arg = "{\"commit_hash\":\"3f2dc2ec21876d31ffa06744f215b6a17c5d3bad\",\"repo_id\":\"1002604\",\"author\":\"sulenn\",\"committer\":\"Monalisa Octocat\",\"email\":\"273409891@qq.com\",\"time\":\"Mon Aug 31 23:24:28 2020 +0800\",\"message\":\"fix dead lock when use AMOP broadcast with FISCO BCOS v2.6 (#71)\",\"commit_diff\":\"commit3f2dc2ec21876d31ffa06744f215b6a17c5d3badAuthor:sulenn<273409891@qq.com>Date:MonAug3123:24:282020+0800fixdeadlockwhenuseAMOPbroadcastwithFISCOBCOSv2.6(#71)diff--gita/conn/channel.gob/conn/channel.goindex4882200..f5384d4100644---a/conn/channel.go+++b/conn/channel.go@@-1035,7+1035,11@@func(hc*channelSession)processMessages(){hc.mu.Lock()ifresponse,ok:=hc.responses[msg.uuid];ok{response.Message=msg-response.Notify<-core{}{}+ifresponse.Notify!=nil{+response.Notify<-core{}{}+close(response.Notify)+}+response.Notify=nil}hc.mu.Unlock()switchmsg.typeN{\"}"
-	response, err := Post(url, body, params, nil)
+	body.Arg = "{\"commit_hash\":\"3f2dc2ec21876d31ffa06744f215b6a17c5d3bay\",\"repo_id\":\"1002608\",\"commit_diff\":\"<273409891@qq.com>\"}"
+	bytes, err := Post(url, body, params, nil)
+	responseJSON, err := utils.ParseHttpResponse(bytes)
 	if err != nil {
-		log.Println(err)
+		t.Fatalf("parse bytes from response failed: %+v\n", err)
 	}
-	log.Println(string(response))
+	log.Printf("all info of response body is: %+v", responseJSON)
 }
 
 func Test_Post_ForPutCommit(t *testing.T) {
@@ -95,10 +104,6 @@ func Test_Post_ForPutCommit(t *testing.T) {
 			t.Fatalf("post request failed, %v\n", err)
 		}
 		log.Println(string(response))
-	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
 	}
 }
 
@@ -134,10 +139,6 @@ func Test_Post_ForGetCommit(t *testing.T) {
 			t.Fatalf("get request failed, %v\n", err)
 		}
 		log.Println(string(response))
-	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
 	}
 }
 
@@ -179,10 +180,6 @@ func Test_Post_ForPutIssue(t *testing.T) {
 			log.Println(string(response))
 		}
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForGetIssue(t *testing.T) {
@@ -222,10 +219,6 @@ func Test_Post_ForGetIssue(t *testing.T) {
 			log.Println(string(response))
 		}
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForGetIssueList(t *testing.T) {
@@ -264,10 +257,6 @@ func Test_Post_ForGetIssueList(t *testing.T) {
 			}
 			log.Println(string(response))
 		}
-	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
 	}
 }
 
@@ -311,10 +300,6 @@ func Test_Post_ForPutPullRequest(t *testing.T) {
 			log.Println(string(response))
 		}
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForGetPullRequest(t *testing.T) {
@@ -353,10 +338,6 @@ func Test_Post_ForGetPullRequest(t *testing.T) {
 			}
 			log.Println(string(response))
 		}
-	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
 	}
 }
 
@@ -397,10 +378,6 @@ func Test_Post_ForGetPullRequestList(t *testing.T) {
 			log.Println(string(response))
 		}
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForPutPullRequestComment(t *testing.T) {
@@ -439,10 +416,6 @@ func Test_Post_ForPutPullRequestComment(t *testing.T) {
 		}
 		log.Println(string(response))
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForGetPullRequestComment(t *testing.T) {
@@ -479,10 +452,6 @@ func Test_Post_ForGetPullRequestComment(t *testing.T) {
 		}
 		log.Println(string(response))
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForGetPullRequestCommentList(t *testing.T) {
@@ -518,10 +487,6 @@ func Test_Post_ForGetPullRequestCommentList(t *testing.T) {
 			t.Fatalf("get request failed, %v\n", err)
 		}
 		log.Println(string(response))
-	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
 	}
 }
 
@@ -561,10 +526,6 @@ func Test_Post_ForPutIssueComment(t *testing.T) {
 		}
 		log.Println(string(response))
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForGetIssueComment(t *testing.T) {
@@ -601,10 +562,6 @@ func Test_Post_ForGetIssueComment(t *testing.T) {
 		}
 		log.Println(string(response))
 	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
-	}
 }
 
 func Test_Post_ForGetIssueCommentList(t *testing.T) {
@@ -640,9 +597,5 @@ func Test_Post_ForGetIssueCommentList(t *testing.T) {
 			t.Fatalf("get request failed, %v\n", err)
 		}
 		log.Println(string(response))
-	}
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("close db failed: %v\n", err)
 	}
 }
